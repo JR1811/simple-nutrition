@@ -18,6 +18,9 @@
 		"main": [
 			"net.shirojr.simplenutrition.SimpleNutrition"
 		],
+		"client": [
+			"net.shirojr.simplenutrition.SimpleNutritionClient"
+		],
 		"fabric-datagen": [
 			"net.shirojr.simplenutrition.SimpleNutritionDataGenerator"
 		]
