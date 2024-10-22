@@ -5,7 +5,7 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.shirojr.simplenutrition.data.TrackedDataUtil;
+import net.shirojr.simplenutrition.gamerules.NutritionGamerules;
 
 import java.util.List;
 
@@ -14,8 +14,9 @@ public class NutritionHandler {
         Nutrition nutrition = (Nutrition) player;
         List<ItemStack> nutritionStacks = nutrition.simple_nutrition$getNutritionStacks();
         long nutritionScore = nutritionStacks.stream().filter(entry -> entry.getItem().equals(stack.getItem())).count();
-        float normalizedNutrition = (float) nutritionScore / TrackedDataUtil.NUTRITION_BUFFER_SIZE;
-        if (nutritionStacks.size() < TrackedDataUtil.NUTRITION_BUFFER_SIZE) return;
+        int nutritionBufferSize = player.getWorld().getGameRules().getInt(NutritionGamerules.STORED_NUTRITION_BUFFER_SIZE);
+        float normalizedNutrition = (float) nutritionScore / nutritionBufferSize;
+        if (nutritionStacks.size() < nutritionBufferSize) return;
         if (!(player instanceof ServerPlayerEntity serverPlayer)) return;
         applyEffects(normalizedNutrition, serverPlayer);
     }
