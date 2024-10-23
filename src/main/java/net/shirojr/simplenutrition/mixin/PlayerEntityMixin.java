@@ -75,7 +75,7 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Nutritio
     private void modifyNutritionState(World world, ItemStack stack, CallbackInfoReturnable<ItemStack> cir) {
         if (world.isClient()) return;
         if (world.getGameRules().getBoolean(NutritionGamerules.APPLY_NUTRITION_FATIGUE)) {
-            simple_nutrition$addNutritionStack(stack);
+            simple_nutrition$addNutritionStack(stack.copy());
         }
     }
 
