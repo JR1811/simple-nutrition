@@ -14,6 +14,7 @@ import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import net.shirojr.simplenutrition.SimpleNutrition;
+import net.shirojr.simplenutrition.compat.NutritionData;
 import net.shirojr.simplenutrition.nutrition.Nutrition;
 import net.shirojr.simplenutrition.util.LinkedHashMapUtil;
 import org.spongepowered.asm.mixin.Mixin;
@@ -33,6 +34,7 @@ public abstract class InventoryScreenMixin extends AbstractInventoryScreen<Playe
 
     @Inject(method = "render", at = @At("TAIL"))
     private void renderNutritionItems(MatrixStack matrices, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        if (!NutritionData.shouldLoadGui()) return;
         if (this.client == null || this.client.player == null) return;
         Nutrition nutrition = (Nutrition) this.client.player;
         var nutritionEntries = nutrition.simple_nutrition$getNutritionStacks();
@@ -50,6 +52,7 @@ public abstract class InventoryScreenMixin extends AbstractInventoryScreen<Playe
 
     @Inject(method = "drawForeground", at = @At("TAIL"))
     private void renderNutritionSlotsTitle(MatrixStack matrices, int mouseX, int mouseY, CallbackInfo ci) {
+        if (!NutritionData.shouldLoadGui()) return;
         if (this.client == null || this.client.player == null) return;
         Nutrition nutrition = (Nutrition) this.client.player;
         if (nutrition.simple_nutrition$getNutritionStacks().isEmpty()) return;
@@ -59,6 +62,7 @@ public abstract class InventoryScreenMixin extends AbstractInventoryScreen<Playe
 
     @Inject(method = "drawBackground", at = @At("TAIL"))
     private void renderNutritionSlots(MatrixStack matrices, float delta, int mouseX, int mouseY, CallbackInfo ci) {
+        if (!NutritionData.shouldLoadGui()) return;
         if (this.client == null || this.client.player == null) return;
         Nutrition nutrition = (Nutrition) this.client.player;
         var nutritionEntries = nutrition.simple_nutrition$getNutritionStacks();
@@ -76,6 +80,7 @@ public abstract class InventoryScreenMixin extends AbstractInventoryScreen<Playe
     @Unique
     @SuppressWarnings("SameParameterValue")
     private void drawNutritionSlots(MatrixStack matrices, int slotAmount, int x, int y) {
+        if (!NutritionData.shouldLoadGui()) return;
         int slotCount = Math.max(slotAmount, 3);
         if (slotCount == 3) {
             DrawableHelper.drawTexture(matrices, x, y, 1, 1, 65, 38, 128, 128);

@@ -8,6 +8,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.world.World;
+import net.shirojr.simplenutrition.compat.NutritionData;
 import net.shirojr.simplenutrition.data.TrackedDataUtil;
 import net.shirojr.simplenutrition.gamerules.NutritionGamerules;
 import net.shirojr.simplenutrition.nutrition.Nutrition;
@@ -85,7 +86,7 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Nutritio
     @Inject(method = "initDataTracker", at = @At("TAIL"))
     private void addNutritionTrackedData(CallbackInfo ci) {
         this.dataTracker.startTracking(NUTRITION_BUFFER, new LinkedHashMap<>());
-        this.dataTracker.startTracking(DIGESTION_DURATION, 6000L);
+        this.dataTracker.startTracking(DIGESTION_DURATION, NutritionData.baseDigestionTime());
     }
 
     @Override
