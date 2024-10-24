@@ -18,10 +18,10 @@ public interface Nutrition {
 
     void simple_nutrition$clear();
 
-    void simple_nutrition$removeLast();
+    void simple_nutrition$removeOldest();
 
     @Nullable
-    Map.Entry<ItemStack, Long> simple_nutrition$getLastEntry();
+    Map.Entry<ItemStack, Long> simple_nutrition$getOldestEntry();
 
     long simple_nutrition$getDigestionDuration();
 

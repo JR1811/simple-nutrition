@@ -93,7 +93,7 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Nutritio
         LinkedHashMap<ItemStack, Long> nutritionStacks = this.dataTracker.get(NUTRITION_BUFFER);
         nutritionStacks.put(stack, world.getTime());
         if (nutritionStacks.size() > TrackedDataUtil.NUTRITION_BUFFER_SIZE) {
-            LinkedHashMapUtil.removeLastEntry(nutritionStacks);
+            LinkedHashMapUtil.removeFirstEntry(nutritionStacks);
         }
         this.dataTracker.set(NUTRITION_BUFFER, nutritionStacks);
         NutritionHandler.applyNutritionEffects((PlayerEntity) (Object) this, stack);
@@ -125,16 +125,16 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Nutritio
     }
 
     @Override
-    public void simple_nutrition$removeLast() {
+    public void simple_nutrition$removeOldest() {
         LinkedHashMap<ItemStack, Long> nutritionStacks = this.dataTracker.get(NUTRITION_BUFFER);
-        LinkedHashMapUtil.removeLastEntry(nutritionStacks);
+        LinkedHashMapUtil.removeFirstEntry(nutritionStacks);
         this.dataTracker.set(NUTRITION_BUFFER, nutritionStacks);
     }
 
     @Override
-    public @Nullable Map.Entry<ItemStack, Long> simple_nutrition$getLastEntry() {
+    public @Nullable Map.Entry<ItemStack, Long> simple_nutrition$getOldestEntry() {
         LinkedHashMap<ItemStack, Long> nutritionStacks = this.dataTracker.get(NUTRITION_BUFFER);
-        return LinkedHashMapUtil.getLast(nutritionStacks);
+        return LinkedHashMapUtil.getFirst(nutritionStacks);
     }
     //endregion
 
@@ -151,13 +151,14 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Nutritio
     @Inject(method = "tick", at = @At("TAIL"))
     private void tickNutrition(CallbackInfo ci) {
         PlayerEntity player = (PlayerEntity) (Object) this;
-        if (player.age % 80 != 0) return;
+        if (player.getWorld().isClient()) return;
         Nutrition nutrition = (Nutrition) player;
-        var optional = Optional.ofNullable(nutrition.simple_nutrition$getLastEntry());
+        var optional = Optional.ofNullable(nutrition.simple_nutrition$getOldestEntry());
         long savedTimeOfLastEntry = optional.map(Map.Entry::getValue).orElse(-1L);
         if (savedTimeOfLastEntry == -1L) return;
+
         if (player.getWorld().getTime() > savedTimeOfLastEntry + nutrition.simple_nutrition$getDigestionDuration()) {
-            nutrition.simple_nutrition$removeLast();
+            nutrition.simple_nutrition$removeOldest();
         }
 
         //TODO: use itmestack food duration on top

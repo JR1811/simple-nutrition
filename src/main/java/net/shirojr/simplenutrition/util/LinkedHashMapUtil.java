@@ -5,18 +5,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+@SuppressWarnings("unused")
 public class LinkedHashMapUtil {
-    public static <T, U> void removeLastEntry(LinkedHashMap<T, U> map) {
-        if (map.isEmpty()) return;
-
-        Map.Entry<T, U> lastEntry = null;
-        for (var entry : map.entrySet()) {
-            lastEntry = entry;
-        }
-        if (lastEntry == null) return;
-        map.remove(lastEntry.getKey());
-    }
-
     @Nullable
     public static <T, U> Map.Entry<T, U> get(LinkedHashMap<T, U> map, int index) {
         if (index > map.size() - 1) return null;
@@ -31,9 +21,29 @@ public class LinkedHashMapUtil {
     }
 
     @Nullable
+    public static <T, U> Map.Entry<T, U> getFirst(LinkedHashMap<T, U> map) {
+        if (map.isEmpty()) return null;
+        return get(map, 0);
+    }
+
+    @Nullable
     public static <T, U> Map.Entry<T, U> getLast(LinkedHashMap<T, U> map) {
         if (map.isEmpty()) return null;
         int index = map.size() - 1;
         return get(map, index);
+    }
+
+    public static <T, U> void removeFirstEntry(LinkedHashMap<T, U> map) {
+        if (map.isEmpty()) return;
+        Map.Entry<T, U> firstEntry = getFirst(map);
+        if (firstEntry == null) return;
+        map.remove(firstEntry.getKey());
+    }
+
+    public static <T, U> void removeLastEntry(LinkedHashMap<T, U> map) {
+        if (map.isEmpty()) return;
+        Map.Entry<T, U> lastEntry = getLast(map);
+        if (lastEntry == null) return;
+        map.remove(lastEntry.getKey());
     }
 }
