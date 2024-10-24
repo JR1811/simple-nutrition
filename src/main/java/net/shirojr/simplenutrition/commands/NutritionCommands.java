@@ -52,12 +52,13 @@ public class NutritionCommands {
     private static int handleSetDigestionTime(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         StringBuilder sb = new StringBuilder("Set digestion time for");
         var players = EntityArgumentType.getPlayers(context, "targets");
-        long time = LongArgumentType.getLong(context, "time");
+        long ticks = LongArgumentType.getLong(context, "time");
+        Pair<String, Integer> time = getFormattedTime(ticks);
         for (ServerPlayerEntity player : players) {
-            ((Nutrition) player).simple_nutrition$setDigestionDuration(time);
+            ((Nutrition) player).simple_nutrition$setDigestionDuration(ticks);
             sb.append(" [%s]".formatted(player.getName().getString()));
         }
-        sb.append(" to %s ticks".formatted(time));
+        sb.append(" to %s %s".formatted(time.getRight(), time.getLeft()));
         context.getSource().getPlayer().sendMessage(new LiteralText(sb.toString()), false);
         return Command.SINGLE_SUCCESS;
     }
