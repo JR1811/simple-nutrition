@@ -15,7 +15,7 @@ public class LivingEntityMixin {
     @WrapOperation(method = "consumeItem", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;spawnConsumptionEffects(Lnet/minecraft/item/ItemStack;I)V"))
     private void modifyNutritionForConsumption(LivingEntity instance, ItemStack activeStack, int particleCount, Operation<Void> original) {
         if (activeStack.getUseAction().equals(UseAction.DRINK) && instance instanceof ServerPlayerEntity player) {
-            ((Nutrition)player).simple_nutrition$clear();
+            ((Nutrition)player).simple_nutrition$removeLast();
         }
         original.call(instance, activeStack, particleCount);
     }

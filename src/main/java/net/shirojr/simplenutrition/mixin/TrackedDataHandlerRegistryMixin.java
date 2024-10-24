@@ -18,5 +18,6 @@ public abstract class TrackedDataHandlerRegistryMixin {
     @Inject(method = "<clinit>", at = @At("TAIL"))
     private static void registerCustomTrackedDataHandler(CallbackInfo ci) {
         register(TrackedDataUtil.ITEM_QUEUE);
+        register(TrackedDataUtil.LONG);
     }
 }

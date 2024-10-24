@@ -12,6 +12,7 @@ import net.shirojr.simplenutrition.data.TrackedDataUtil;
 import net.shirojr.simplenutrition.gamerules.NutritionGamerules;
 import net.shirojr.simplenutrition.nutrition.Nutrition;
 import net.shirojr.simplenutrition.nutrition.NutritionHandler;
+import net.shirojr.simplenutrition.util.LinkedHashMapUtil;
 import net.shirojr.simplenutrition.util.NbtKeys;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
@@ -22,8 +23,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
 
 @Mixin(PlayerEntity.class)
 public abstract class PlayerEntityMixin extends LivingEntity implements Nutrition {
@@ -31,76 +33,136 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Nutritio
     public abstract void remove(RemovalReason reason);
 
     @Unique
-    private static final TrackedData<List<ItemStack>> NUTRITION_BUFFER =
+    private static final TrackedData<LinkedHashMap<ItemStack, Long>> NUTRITION_BUFFER =
             DataTracker.registerData(PlayerEntityMixin.class, TrackedDataUtil.ITEM_QUEUE);
+
+    @Unique
+    private static final TrackedData<Long> DIGESTION_DURATION =
+            DataTracker.registerData(PlayerEntityMixin.class, TrackedDataUtil.LONG);
+
 
     protected PlayerEntityMixin(EntityType<? extends LivingEntity> entityType, World world) {
         super(entityType, world);
     }
 
+
+    @Inject(method = "readCustomDataFromNbt", at = @At("TAIL"))
+    private void nutritionFromNbt(NbtCompound nbt, CallbackInfo ci) {
+        if (nbt.contains(NbtKeys.NUTRITION_BUFFER)) {
+            LinkedHashMap<ItemStack, Long> nutritionItems = new LinkedHashMap<>();
+            NbtCompound listNbt = nbt.getCompound(NbtKeys.NUTRITION_BUFFER);
+            for (int i = 0; i < listNbt.getKeys().size(); i++) {
+                NbtCompound entryNbt = listNbt.getCompound(String.valueOf(i));
+                ItemStack stack = ItemStack.fromNbt(entryNbt.getCompound(NbtKeys.ITEM_STACK));
+                long time = entryNbt.getLong(NbtKeys.TIME);
+                nutritionItems.put(stack, time);
+            }
+            this.dataTracker.set(NUTRITION_BUFFER, nutritionItems);
+        }
+        if (nbt.contains(NbtKeys.DIGESTION_DURATION)) {
+            this.dataTracker.set(DIGESTION_DURATION, nbt.getLong(NbtKeys.DIGESTION_DURATION));
+        }
+    }
+
+    @Inject(method = "writeCustomDataToNbt", at = @At("TAIL"))
+    private void nutritionToNbt(NbtCompound nbt, CallbackInfo ci) {
+        LinkedHashMap<ItemStack, Long> nutritionList = simple_nutrition$getNutritionStacks();
+        NbtCompound listNbt = new NbtCompound();
+        int i = 0;
+        for (var entry : nutritionList.entrySet()) {
+            NbtCompound entryNbt = new NbtCompound();
+            NbtCompound itemStackNbt = new NbtCompound();
+            entryNbt.put(NbtKeys.ITEM_STACK, entry.getKey().writeNbt(itemStackNbt));
+            entryNbt.putLong(NbtKeys.TIME, entry.getValue());
+            listNbt.put(String.valueOf(i), entryNbt);
+            i++;
+        }
+        nbt.put(NbtKeys.NUTRITION_BUFFER, listNbt);
+        nbt.putLong(NbtKeys.DIGESTION_DURATION, this.dataTracker.get(DIGESTION_DURATION));
+    }
+
+    //region DataTracker interaction
     @Inject(method = "initDataTracker", at = @At("TAIL"))
     private void addNutritionTrackedData(CallbackInfo ci) {
-        this.dataTracker.startTracking(NUTRITION_BUFFER, new ArrayList<>());
+        this.dataTracker.startTracking(NUTRITION_BUFFER, new LinkedHashMap<>());
+        this.dataTracker.startTracking(DIGESTION_DURATION, 6000L);
     }
 
     @Override
-    public void simple_nutrition$addNutritionStack(ItemStack stack) {
-        List<ItemStack> nutritionStacks = this.dataTracker.get(NUTRITION_BUFFER);
-        nutritionStacks.add(stack);
+    public void simple_nutrition$addNutritionStack(World world, ItemStack stack) {
+        LinkedHashMap<ItemStack, Long> nutritionStacks = this.dataTracker.get(NUTRITION_BUFFER);
+        nutritionStacks.put(stack, world.getTime());
         if (nutritionStacks.size() > TrackedDataUtil.NUTRITION_BUFFER_SIZE) {
-            nutritionStacks.remove(nutritionStacks.size() - 1);
+            LinkedHashMapUtil.removeLastEntry(nutritionStacks);
         }
         this.dataTracker.set(NUTRITION_BUFFER, nutritionStacks);
         NutritionHandler.applyNutritionEffects((PlayerEntity) (Object) this, stack);
     }
 
     @Override
-    public List<ItemStack> simple_nutrition$getNutritionStacks() {
+    public LinkedHashMap<ItemStack, Long> simple_nutrition$getNutritionStacks() {
         return this.dataTracker.get(NUTRITION_BUFFER);
     }
 
     @Override
-    public @Nullable ItemStack simple_nutrition$getNutritionStack(int index) {
-        List<ItemStack> nutritionStacks = this.dataTracker.get(NUTRITION_BUFFER);
-        if (index > nutritionStacks.size() - 1) return null;
-        return nutritionStacks.get(index);
+    public @Nullable Map.Entry<ItemStack, Long> simple_nutrition$getNutritionStack(int index) {
+        return LinkedHashMapUtil.get(this.dataTracker.get(NUTRITION_BUFFER), index);
+    }
+
+    @Override
+    public long simple_nutrition$getDigestionDuration() {
+        return this.dataTracker.get(DIGESTION_DURATION);
+    }
+
+    @Override
+    public void simple_nutrition$setDigestionDuration(long duration) {
+        this.dataTracker.set(DIGESTION_DURATION, duration);
     }
 
     @Override
     public void simple_nutrition$clear() {
-        this.dataTracker.set(NUTRITION_BUFFER, new ArrayList<>());
+        this.dataTracker.set(NUTRITION_BUFFER, new LinkedHashMap<>());
     }
+
+    @Override
+    public void simple_nutrition$removeLast() {
+        LinkedHashMap<ItemStack, Long> nutritionStacks = this.dataTracker.get(NUTRITION_BUFFER);
+        LinkedHashMapUtil.removeLastEntry(nutritionStacks);
+        this.dataTracker.set(NUTRITION_BUFFER, nutritionStacks);
+    }
+
+    @Override
+    public @Nullable Map.Entry<ItemStack, Long> simple_nutrition$getLastEntry() {
+        LinkedHashMap<ItemStack, Long> nutritionStacks = this.dataTracker.get(NUTRITION_BUFFER);
+        return LinkedHashMapUtil.getLast(nutritionStacks);
+    }
+    //endregion
+
 
     @Inject(method = "eatFood", at = @At("HEAD"))
     private void modifyNutritionState(World world, ItemStack stack, CallbackInfoReturnable<ItemStack> cir) {
         if (world.isClient()) return;
         if (world.getGameRules().getBoolean(NutritionGamerules.APPLY_NUTRITION_FATIGUE)) {
-            simple_nutrition$addNutritionStack(stack.copy());
+            simple_nutrition$addNutritionStack(world, stack.copy());
+            //TODO: train digestion time to perform better
         }
     }
 
-    @Inject(method = "readCustomDataFromNbt", at = @At("TAIL"))
-    private void nutritionFromNbt(NbtCompound nbt, CallbackInfo ci) {
-        if (nbt.contains(NbtKeys.NUTRITION_BUFFER)) {
-            List<ItemStack> nutritionItems = new ArrayList<>();
-            NbtCompound listNbt = nbt.getCompound(NbtKeys.NUTRITION_BUFFER);
-            for (int i = 0; i < listNbt.getKeys().size(); i++) {
-                nutritionItems.add(ItemStack.fromNbt(listNbt.getCompound(String.valueOf(i))));
-            }
-            this.dataTracker.set(NUTRITION_BUFFER, nutritionItems);
+    @Inject(method = "tick", at = @At("TAIL"))
+    private void tickNutrition(CallbackInfo ci) {
+        PlayerEntity player = (PlayerEntity) (Object) this;
+        if (player.age % 80 != 0) return;
+        Nutrition nutrition = (Nutrition) player;
+        var optional = Optional.ofNullable(nutrition.simple_nutrition$getLastEntry());
+        long savedTimeOfLastEntry = optional.map(Map.Entry::getValue).orElse(-1L);
+        if (savedTimeOfLastEntry == -1L) return;
+        if (player.getWorld().getTime() > savedTimeOfLastEntry + nutrition.simple_nutrition$getDigestionDuration()) {
+            nutrition.simple_nutrition$removeLast();
         }
-    }
 
-    @Inject(method = "writeCustomDataToNbt", at = @At("TAIL"))
-    private void nutritionToNbt(NbtCompound nbt, CallbackInfo ci) {
-        List<ItemStack> nutritionList = simple_nutrition$getNutritionStacks();
-        NbtCompound listNbt = new NbtCompound();
-        for (int i = 0; i < nutritionList.size(); i++) {
-            ItemStack stack = nutritionList.get(i);
-            NbtCompound entryNbt = new NbtCompound();
-            stack.writeNbt(entryNbt);
-            listNbt.put(String.valueOf(i), entryNbt);
-        }
-        nbt.put(NbtKeys.NUTRITION_BUFFER, listNbt);
+        //TODO: use itmestack food duration on top
+
+        // full nutrition = 20
+        // 1 min = 1200 ticks -> 5 min = 6000
     }
 }
