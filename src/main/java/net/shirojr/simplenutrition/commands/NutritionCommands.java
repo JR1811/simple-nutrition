@@ -15,6 +15,9 @@ import net.minecraft.util.Pair;
 import net.minecraft.world.World;
 import net.shirojr.simplenutrition.nutrition.Nutrition;
 
+import java.util.Map;
+import java.util.Set;
+
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 
@@ -65,12 +68,15 @@ public class NutritionCommands {
 
     private static int handlePrint(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         for (ServerPlayerEntity player : EntityArgumentType.getPlayers(context, "targets")) {
+
+            Set<Map.Entry<ItemStack, Long>> nutritionEntries = ((Nutrition) player).simple_nutrition$getNutritionStacks().entrySet();
+            long digestionDuration = ((Nutrition) player).simple_nutrition$getDigestionDuration();
+
             context.getSource().getPlayer().sendMessage(
                     new LiteralText("---- [ %s | digestion duration: %s ] ---".formatted(
-                            player.getName().getString(),
-                            ((Nutrition) player).simple_nutrition$getDigestionDuration())),
-                    false);
-            for (var entry : ((Nutrition) player).simple_nutrition$getNutritionStacks().entrySet()) {
+                            player.getName().getString(), digestionDuration)), false);
+
+            for (var entry : nutritionEntries) {
                 World world = player.getWorld();
                 ItemStack nutritionStack = entry.getKey().copy();
                 Pair<String, Integer> time = getFormattedTime(world.getTime() - entry.getValue());

@@ -134,8 +134,7 @@ public abstract class PlayerEntityMixin extends LivingEntity implements Nutritio
 
     @Override
     public @Nullable Map.Entry<ItemStack, Long> simple_nutrition$getOldestEntry() {
-        LinkedHashMap<ItemStack, Long> nutritionStacks = this.dataTracker.get(NUTRITION_BUFFER);
-        return LinkedHashMapUtil.getFirst(nutritionStacks);
+        return LinkedHashMapUtil.getFirst(this.dataTracker.get(NUTRITION_BUFFER));
     }
     //endregion
 
