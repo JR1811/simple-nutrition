@@ -10,7 +10,7 @@ import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.LiteralText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Pair;
 import net.minecraft.world.World;
 import net.shirojr.simplenutrition.nutrition.Nutrition;
@@ -45,7 +45,7 @@ public class NutritionCommands {
         for (ServerPlayerEntity player : players) {
             Nutrition nutrition = (Nutrition) player;
             Pair<String, Integer> time = getFormattedTime(nutrition.simple_nutrition$getDigestionDuration());
-            context.getSource().getPlayer().sendMessage(new LiteralText("%s - %s %s"
+            context.getSource().getPlayer().sendMessage(Text.literal("%s - %s %s"
                             .formatted(player.getName().getString(), time.getRight(), time.getLeft())),
                     false);
         }
@@ -62,7 +62,7 @@ public class NutritionCommands {
             sb.append(" [%s]".formatted(player.getName().getString()));
         }
         sb.append(" to %s %s".formatted(time.getRight(), time.getLeft()));
-        context.getSource().getPlayer().sendMessage(new LiteralText(sb.toString()), false);
+        context.getSource().getPlayer().sendMessage(Text.literal(sb.toString()), false);
         return Command.SINGLE_SUCCESS;
     }
 
@@ -73,7 +73,7 @@ public class NutritionCommands {
             long digestionDuration = ((Nutrition) player).simple_nutrition$getDigestionDuration();
 
             context.getSource().getPlayer().sendMessage(
-                    new LiteralText("---- [ %s | digestion duration: %s ] ---".formatted(
+                    Text.literal("---- [ %s | digestion duration: %s ] ---".formatted(
                             player.getName().getString(), digestionDuration)), false);
 
             for (var entry : nutritionEntries) {
@@ -82,7 +82,7 @@ public class NutritionCommands {
                 Pair<String, Integer> time = getFormattedTime(world.getTime() - entry.getValue());
 
                 context.getSource().getPlayer().sendMessage(
-                        new LiteralText("%sx %s (%s %s ago)".formatted(nutritionStack.getCount(),
+                        Text.literal("%sx %s (%s %s ago)".formatted(nutritionStack.getCount(),
                                 nutritionStack.getItem().getName().getString(), time.getRight(), time.getLeft())),
                         false);
             }
@@ -93,14 +93,14 @@ public class NutritionCommands {
     private static int handleRemovalSelf(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerPlayerEntity player = context.getSource().getPlayer();
         ((Nutrition) player).simple_nutrition$clear();
-        context.getSource().getPlayer().sendMessage(new LiteralText("cleared digested item list"), false);
+        context.getSource().getPlayer().sendMessage(Text.literal("cleared digested item list"), false);
         return Command.SINGLE_SUCCESS;
     }
 
     private static int handleRemoval(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         for (ServerPlayerEntity player : EntityArgumentType.getPlayers(context, "targets")) {
             ((Nutrition) player).simple_nutrition$clear();
-            context.getSource().getPlayer().sendMessage(new LiteralText("cleared digested item list for " + player.getName().getString()), false);
+            context.getSource().getPlayer().sendMessage(Text.literal("cleared digested item list for " + player.getName().getString()), false);
         }
         return Command.SINGLE_SUCCESS;
     }
