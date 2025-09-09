@@ -7,30 +7,37 @@ import net.minecraft.item.FoodComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.MathHelper;
-import net.shirojr.simplenutrition.gamerules.NutritionGamerules;
+import net.shirojr.simplenutrition.compat.cca.components.NutritionComponent;
 
-import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 public class NutritionHandler {
-    public static void applyNutritionEffects(PlayerEntity player, ItemStack stack) {
-        Nutrition nutrition = (Nutrition) player;
-        LinkedHashMap<ItemStack, Long> nutritionStacks = nutrition.simple_nutrition$getNutritionStacks();
-        long nutritionScore = nutritionStacks.entrySet().stream().filter(entry -> entry.getKey().getItem().equals(stack.getItem())).count();
-        int nutritionBufferSize = player.getWorld().getGameRules().getInt(NutritionGamerules.STORED_NUTRITION_BUFFER_SIZE);
-        float normalizedNutrition = (float) nutritionScore / nutritionBufferSize;
+    public static void applyNutritionEffects(PlayerEntity player, ItemStack newDigestionStack) {
+        NutritionComponent nutritionComponent = NutritionComponent.get(player);
+        Map<ItemStack, Long> nutritionStacks = nutritionComponent.getNutritionBuffer();
+
+        long nutritionScore = 0;
+        for (ItemStack entry : nutritionStacks.keySet()) {
+            if (!entry.getItem().equals(newDigestionStack.getItem())) continue;
+            nutritionScore += 1;
+        }
+        int nutritionBufferSize = nutritionComponent.getNutritionBufferSize();
         if (nutritionStacks.size() < nutritionBufferSize) return;
         if (!(player instanceof ServerPlayerEntity serverPlayer)) return;
+        float normalizedNutrition = (float) nutritionScore / nutritionBufferSize;
         applyEffects(serverPlayer, normalizedNutrition);
-        trainDigestion(serverPlayer, stack);
+        trainDigestion(serverPlayer, newDigestionStack);
     }
 
     private static void applyEffects(ServerPlayerEntity player, float normalizedNutrition) {
         // TODO: rethink / balance effect application
         if (normalizedNutrition >= 1) {
             player.addStatusEffect(new StatusEffectInstance(StatusEffects.POISON, 80, 1, true, false, true), player);
+            player.addStatusEffect(new StatusEffectInstance(StatusEffects.BLINDNESS, 80, 1, true, false, true), player);
         } else if (normalizedNutrition > 0.8) {
             player.addStatusEffect(new StatusEffectInstance(StatusEffects.NAUSEA, 200, 2, true, false, true), player);
+            player.addStatusEffect(new StatusEffectInstance(StatusEffects.BLINDNESS, 40, 1, true, false, true), player);
         } else if (normalizedNutrition > 0.4) {
             player.addStatusEffect(new StatusEffectInstance(StatusEffects.NAUSEA, 60, 1, true, false, true), player);
         }
@@ -41,12 +48,13 @@ public class NutritionHandler {
         int minTimeReduction = 20, maxTimeReduction = 100;
 
         float normalizedItemHunger = Optional.ofNullable(stack.getItem().getFoodComponent()).map(FoodComponent::getHunger).orElse(0) / 20f;
-        if (player.getRandom().nextFloat() < normalizedItemHunger) {
-            Nutrition nutrition = (Nutrition) player;
-            long currentDigestionTime = nutrition.simple_nutrition$getDigestionDuration();
-            if (currentDigestionTime <= minTrainableTime) return;
-            long lerpedHungerValue = (long) (currentDigestionTime - MathHelper.lerp(normalizedItemHunger, minTimeReduction, maxTimeReduction));
-            nutrition.simple_nutrition$setDigestionDuration(lerpedHungerValue);
-        }
+        if (player.getRandom().nextFloat() >= normalizedItemHunger) return;
+
+        NutritionComponent nutritionComponent = NutritionComponent.get(player);
+
+        long currentDigestionTime = nutritionComponent.getDigestionDuration();
+        if (currentDigestionTime <= minTrainableTime) return;
+        long lerpedHungerValue = currentDigestionTime - MathHelper.lerp(normalizedItemHunger, minTimeReduction, maxTimeReduction);
+        nutritionComponent.setDigestionDuration(lerpedHungerValue, true);
     }
 }

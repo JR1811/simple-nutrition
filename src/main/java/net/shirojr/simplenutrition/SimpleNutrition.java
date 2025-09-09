@@ -1,8 +1,9 @@
 package net.shirojr.simplenutrition;
 
 import net.fabricmc.api.ModInitializer;
+import net.minecraft.util.Identifier;
 import net.shirojr.simplenutrition.commands.NutritionCommands;
-import net.shirojr.simplenutrition.compat.NutritionData;
+import net.shirojr.simplenutrition.compat.config.NutritionData;
 import net.shirojr.simplenutrition.gamerules.NutritionGamerules;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,5 +20,9 @@ public class SimpleNutrition implements ModInitializer {
         NutritionData.initialize();
 
         LOGGER.info("FEED ME MORE!");
+    }
+
+    public static Identifier getId(String path) {
+        return Identifier.of(MOD_ID, path);
     }
 }

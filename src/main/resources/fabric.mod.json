@@ -23,15 +23,25 @@
 		],
 		"fabric-datagen": [
 			"net.shirojr.simplenutrition.SimpleNutritionDataGenerator"
+		],
+		"cardinal-components-entity": [
+			"net.shirojr.simplenutrition.compat.cca.SimpleNutritionComponents"
 		]
 	},
 	"mixins": [
 		"simple-nutrition.mixins.json"
 	],
+	"custom": {
+		"cardinal-components": [
+			"simple-nutrition:nutrition"
+		]
+	},
 	"depends": {
-		"fabricloader": ">=0.14.21",
-		"minecraft": "~1.18.2",
+		"fabricloader": ">=0.17.2",
+		"minecraft": "~1.20.1",
 		"java": ">=17",
-		"fabric-api": "*"
+		"fabric-api": "*",
+		"cardinal-components-base": "^5.2.3",
+		"cardinal-components-entity": "^5.2.3"
 	}
 }

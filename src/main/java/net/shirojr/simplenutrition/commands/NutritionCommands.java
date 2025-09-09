@@ -5,24 +5,24 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.item.ItemStack;
+import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.LiteralText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Pair;
 import net.minecraft.world.World;
-import net.shirojr.simplenutrition.nutrition.Nutrition;
-
-import java.util.Map;
-import java.util.Set;
+import net.shirojr.simplenutrition.compat.cca.components.NutritionComponent;
 
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 
-public class NutritionCommands {
-    public static void register(CommandDispatcher<ServerCommandSource> dispatcher, boolean b) {
+public class NutritionCommands implements net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback {
+    @Override
+    public void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess commandRegistryAccess, CommandManager.RegistrationEnvironment registrationEnvironment) {
         dispatcher.register(literal("nutrition")
                 .requires(source -> source.hasPermissionLevel(2))
                 .then(literal("clear")
@@ -43,9 +43,9 @@ public class NutritionCommands {
     private static int handleDigestionPrint(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         var players = EntityArgumentType.getPlayers(context, "targets");
         for (ServerPlayerEntity player : players) {
-            Nutrition nutrition = (Nutrition) player;
-            Pair<String, Integer> time = getFormattedTime(nutrition.simple_nutrition$getDigestionDuration());
-            context.getSource().getPlayer().sendMessage(new LiteralText("%s - %s %s"
+            NutritionComponent nutritionComponent = NutritionComponent.get(player);
+            Pair<String, Integer> time = getFormattedTime(nutritionComponent.getDigestionDuration());
+            context.getSource().sendFeedback(() -> Text.literal("%s - %s %s"
                             .formatted(player.getName().getString(), time.getRight(), time.getLeft())),
                     false);
         }
@@ -58,22 +58,24 @@ public class NutritionCommands {
         long ticks = LongArgumentType.getLong(context, "time");
         Pair<String, Integer> time = getFormattedTime(ticks);
         for (ServerPlayerEntity player : players) {
-            ((Nutrition) player).simple_nutrition$setDigestionDuration(ticks);
+            NutritionComponent nutritionComponent = NutritionComponent.get(player);
+            nutritionComponent.setDigestionDuration(ticks, true);
             sb.append(" [%s]".formatted(player.getName().getString()));
         }
         sb.append(" to %s %s".formatted(time.getRight(), time.getLeft()));
-        context.getSource().getPlayer().sendMessage(new LiteralText(sb.toString()), false);
+        context.getSource().sendFeedback(() -> Text.literal(sb.toString()), false);
         return Command.SINGLE_SUCCESS;
     }
 
     private static int handlePrint(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         for (ServerPlayerEntity player : EntityArgumentType.getPlayers(context, "targets")) {
+            NutritionComponent nutritionComponent = NutritionComponent.get(player);
 
-            Set<Map.Entry<ItemStack, Long>> nutritionEntries = ((Nutrition) player).simple_nutrition$getNutritionStacks().entrySet();
-            long digestionDuration = ((Nutrition) player).simple_nutrition$getDigestionDuration();
+            var nutritionEntries = nutritionComponent.getNutritionBuffer().entrySet();
+            long digestionDuration = nutritionComponent.getDigestionDuration();
 
-            context.getSource().getPlayer().sendMessage(
-                    new LiteralText("---- [ %s | digestion duration: %s ] ---".formatted(
+            context.getSource().sendFeedback(() ->
+                    Text.literal("---- [ %s | digestion duration: %s ] ---".formatted(
                             player.getName().getString(), digestionDuration)), false);
 
             for (var entry : nutritionEntries) {
@@ -81,9 +83,9 @@ public class NutritionCommands {
                 ItemStack nutritionStack = entry.getKey().copy();
                 Pair<String, Integer> time = getFormattedTime(world.getTime() - entry.getValue());
 
-                context.getSource().getPlayer().sendMessage(
-                        new LiteralText("%sx %s (%s %s ago)".formatted(nutritionStack.getCount(),
-                                nutritionStack.getItem().getName().getString(), time.getRight(), time.getLeft())),
+                context.getSource().sendFeedback(() ->
+                                Text.literal("%sx %s (%s %s ago)".formatted(nutritionStack.getCount(),
+                                        nutritionStack.getItem().getName().getString(), time.getRight(), time.getLeft())),
                         false);
             }
         }
@@ -92,15 +94,20 @@ public class NutritionCommands {
 
     private static int handleRemovalSelf(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerPlayerEntity player = context.getSource().getPlayer();
-        ((Nutrition) player).simple_nutrition$clear();
-        context.getSource().getPlayer().sendMessage(new LiteralText("cleared digested item list"), false);
+        if (player == null) {
+            throw EntityArgumentType.PLAYER_NOT_FOUND_EXCEPTION.create();
+        }
+        NutritionComponent nutritionComponent = NutritionComponent.get(player);
+        nutritionComponent.clear();
+        context.getSource().getPlayer().sendMessage(Text.literal("cleared digested item list"), false);
         return Command.SINGLE_SUCCESS;
     }
 
     private static int handleRemoval(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         for (ServerPlayerEntity player : EntityArgumentType.getPlayers(context, "targets")) {
-            ((Nutrition) player).simple_nutrition$clear();
-            context.getSource().getPlayer().sendMessage(new LiteralText("cleared digested item list for " + player.getName().getString()), false);
+            NutritionComponent nutritionComponent = NutritionComponent.get(player);
+            nutritionComponent.clear();
+            context.getSource().sendFeedback(() -> Text.literal("cleared digested item list for " + player.getName().getString()), false);
         }
         return Command.SINGLE_SUCCESS;
     }
@@ -128,6 +135,6 @@ public class NutritionCommands {
     }
 
     public static void initialize() {
-        CommandRegistrationCallback.EVENT.register(NutritionCommands::register);
+        CommandRegistrationCallback.EVENT.register(new NutritionCommands());
     }
 }

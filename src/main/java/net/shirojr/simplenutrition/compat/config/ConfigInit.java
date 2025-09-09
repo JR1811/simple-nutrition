@@ -1,4 +1,4 @@
-package net.shirojr.simplenutrition.config;
+package net.shirojr.simplenutrition.compat.config;
 
 import me.shedaniel.autoconfig.AutoConfig;
 import me.shedaniel.autoconfig.serializer.JanksonConfigSerializer;
