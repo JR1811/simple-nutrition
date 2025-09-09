@@ -73,10 +73,10 @@ public class NutritionCommands implements net.fabricmc.fabric.api.command.v2.Com
 
             var nutritionEntries = nutritionComponent.getNutritionBuffer().entrySet();
             long digestionDuration = nutritionComponent.getDigestionDuration();
-
+            Pair<String, Integer> formattedTime = getFormattedTime(digestionDuration);
             context.getSource().sendFeedback(() ->
-                    Text.literal("---- [ %s | digestion duration: %s ] ---".formatted(
-                            player.getName().getString(), digestionDuration)), false);
+                    Text.literal("---- [ %s | digestion duration: %s %s ] ---".formatted(
+                            player.getName().getString(), formattedTime.getLeft(), formattedTime.getRight())), false);
 
             for (var entry : nutritionEntries) {
                 World world = player.getWorld();

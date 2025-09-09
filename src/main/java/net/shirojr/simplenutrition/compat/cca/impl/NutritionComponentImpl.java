@@ -10,6 +10,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.shirojr.simplenutrition.compat.cca.SimpleNutritionComponents;
 import net.shirojr.simplenutrition.compat.cca.components.NutritionComponent;
 import net.shirojr.simplenutrition.compat.config.NutritionData;
+import net.shirojr.simplenutrition.util.LinkedHashMapUtil;
 import net.shirojr.simplenutrition.util.NbtKeys;
 
 import java.util.LinkedHashMap;
@@ -74,7 +75,10 @@ public class NutritionComponentImpl implements NutritionComponent, AutoSyncedCom
     public void serverTick() {
         if (!(provider instanceof ServerPlayerEntity serverPlayer)) return;
         long currentTime = serverPlayer.getWorld().getTime();
-        getNutritionBuffer().entrySet().removeIf(entry -> entry.getValue() + getDigestionDuration() > currentTime);
+        var oldestEntry = LinkedHashMapUtil.getFirst(getNutritionBuffer());
+        if (oldestEntry == null) return;
+        if (oldestEntry.getValue() + getDigestionDuration() > currentTime) return;
+        modifyNutritionBuffer(buffer -> buffer.remove(oldestEntry.getKey()), true);
     }
 
     @Override

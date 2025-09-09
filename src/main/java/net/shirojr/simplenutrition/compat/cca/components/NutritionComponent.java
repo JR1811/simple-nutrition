@@ -44,13 +44,14 @@ public interface NutritionComponent extends Component, ServerTickingComponent {
     }
 
     default void addConsumedStack(ServerWorld world, ItemStack stack) {
+        ItemStack newStack = stack.copy();
         modifyNutritionBuffer(buffer -> {
-            buffer.put(stack, world.getTime());
+            buffer.put(newStack, world.getTime());
             if (buffer.size() > getNutritionBufferSize()) {
                 LinkedHashMapUtil.removeFirstEntry(buffer);
             }
         }, true);
-        NutritionHandler.applyNutritionEffects(getProvider(), stack);
+        NutritionHandler.applyNutritionEffects(getProvider(), newStack);
     }
 
     default void clear() {
